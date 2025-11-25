@@ -1,0 +1,1 @@
+export { hexToCss } from './hexToCss';

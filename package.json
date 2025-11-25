@@ -1,0 +1,121 @@
+{
+  "name": "@webeach/gl-circular-progress",
+  "version": "0.0.0",
+  "author": {
+    "name": "Ruslan Martynov",
+    "email": "github@webea.ch"
+  },
+  "description": "Beautiful WebGL circular progress bars library (Fire and Liquid effects).",
+  "keywords": [
+    "webgl",
+    "circular-progress",
+    "progress-bar",
+    "canvas",
+    "fire",
+    "liquid",
+    "shader",
+    "typescript",
+    "ui",
+    "component",
+    "webeach"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/webeach/gl-circular-progress"
+  },
+  "bugs": {
+    "url": "https://github.com/webeach/gl-circular-progress/issues"
+  },
+  "homepage": "https://webeach.github.io/gl-circular-progress",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
+  },
+  "engines": {
+    "node": "^22",
+    "pnpm": "^10"
+  },
+  "type": "module",
+  "main": "./lib/cjs/index.js",
+  "module": "./lib/esm/index.js",
+  "types": "./lib/types/index.d.ts",
+  "files": [
+    "docs/en",
+    "lib",
+    "LICENSE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "build:demo": "rm -rf demo/lib && ln -s ../lib/esm demo/lib",
+    "build:watch": "rollup -c -w",
+    "start": "pnpm run build:demo && npx http-server demo",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
+    "lint:types": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "release": "semantic-release",
+    "generate-exports": "tsx ./scripts/generate-exports.ts",
+    "prepare": "is-ci || husky"
+  },
+  "lint-staged": {
+    "**/*.{cjs,cts,js,jsx,mjs,mts,ts,tsx}": [
+      "pnpm run lint"
+    ]
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.35.0",
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^11.0.5",
+    "@semantic-release/npm": "^12.0.2",
+    "@semantic-release/release-notes-generator": "^14.1.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.3.1",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "fast-glob": "^3.3.3",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "is-ci": "^4.1.0",
+    "lint-staged": "^16.1.6",
+    "prettier": "^3.6.2",
+    "rollup": "^4.50.1",
+    "rollup-plugin-glsl": "^1.3.0",
+    "rollup-plugin-node-externals": "^8.1.1",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "semantic-release": "^24.2.7",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.43.0",
+    "vitest": "^3.2.4"
+  },
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "import": "./lib/esm/index.js",
+      "require": "./lib/cjs/index.js"
+    },
+    "./CircularProgressFire": {
+      "types": "./lib/types/classes/CircularProgressFire/index.d.ts",
+      "import": "./lib/esm/classes/CircularProgressFire/index.js",
+      "require": "./lib/cjs/classes/CircularProgressFire/index.js"
+    },
+    "./CircularProgressLiquid": {
+      "types": "./lib/types/classes/CircularProgressLiquid/index.d.ts",
+      "import": "./lib/esm/classes/CircularProgressLiquid/index.js",
+      "require": "./lib/cjs/classes/CircularProgressLiquid/index.js"
+    }
+  }
+}
