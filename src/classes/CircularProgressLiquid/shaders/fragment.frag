@@ -1,5 +1,6 @@
 #version 300 es
-precision mediump float;
+// Using highp to prevent coordinate jitter on mobile devices
+precision highp float;
 
 in vec2 v_uv;
 out vec4 fragColor;
@@ -14,22 +15,30 @@ uniform float u_outerRadius;
 
 uniform float u_reversed;
 uniform float u_startAngle;
-uniform float u_volume; // New uniform for 3D/Lens effect
+uniform float u_volume;
 
 #define PI 3.14159265359
 #define TWO_PI 6.28318530718
 
-float random(in vec2 st) {
-    return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
+// Hash function for random numbers (more stable than sine on mobile)
+float random(vec2 p) {
+    vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
 }
 
 void main() {
+    // Normalize coordinates
     vec2 st = v_uv * 2.0 - 1.0;
-    st.x *= u_resolution.x / u_resolution.y;
+
+    // Aspect ratio correction (guard against division by zero)
+    if (u_resolution.y > 0.0) {
+        st.x *= u_resolution.x / u_resolution.y;
+    }
 
     float radius = length(st);
 
-    // --- ANGLE CALCULATION ---
+    // Angle calculation
     float absAngle = atan(st.x, st.y);
     if (absAngle < 0.0) absAngle += TWO_PI;
 
@@ -49,7 +58,6 @@ void main() {
     float progressAngle = u_progress * TWO_PI;
 
     // --- PHYSICS ---
-    // Calculate physics first so activeBoundary can be used in rounded caps for the head
     float flowProfile = 1.0 - pow(abs(radius - centerRadius) / (safeTrackWidth * 0.5), 2.0);
     flowProfile = clamp(flowProfile, 0.0, 1.0);
 
@@ -58,45 +66,43 @@ void main() {
 
     float activeBoundary = progressAngle + pressureBulge + ripples;
 
-    // --- ROUNDED CAPS (BORDER RADIUS) ---
-    // Logic adapted from Fire shader
+    // --- ROUNDED CAPS ---
     float halfWidth = safeTrackWidth * 0.5;
     float trackCenter = centerRadius;
-    
-    // Arc length at center radius
-    // We want full rounding when progress is small, and diminishing rounding as it approaches 100%
-    float capRadius = halfWidth; // Full rounding radius
-    
+    float capRadius = halfWidth;
+
+    // Rounding animation when completing the circle
     float roundingFactor = 1.0;
     if (u_progress > 0.9) {
-        roundingFactor = (1.0 - u_progress) * 10.0; // 1.0 at 0.9, 0.0 at 1.0
+        roundingFactor = (1.0 - u_progress) * 10.0;
     }
-    
     float effectiveCapRadius = capRadius * roundingFactor;
-    
-    // Use activeBoundary for the Head to allow bulge/stretch
+
     float dEnd = (activeBoundary - angle) * trackCenter;
     float dStart = angle * trackCenter;
     float dSide = halfWidth - abs(radius - trackCenter);
-    
-    // Head Rounding
+
+    // Edge smoothing for mobile (slightly softer)
+    float capSoftness = 0.01;
+
+    // Head rounding
     float headRounding = 1.0;
     if (dEnd < effectiveCapRadius && dSide < effectiveCapRadius) {
         float cx = effectiveCapRadius - dEnd;
         float cy = effectiveCapRadius - dSide;
         float cornerDist = sqrt(cx*cx + cy*cy);
-        headRounding = 1.0 - smoothstep(effectiveCapRadius - 0.005, effectiveCapRadius + 0.005, cornerDist);
+        headRounding = 1.0 - smoothstep(effectiveCapRadius - capSoftness, effectiveCapRadius + capSoftness, cornerDist);
     }
-    
-    // Tail Rounding
+
+    // Tail rounding
     float tailRounding = 1.0;
     if (dStart < effectiveCapRadius && dSide < effectiveCapRadius) {
         float cx = effectiveCapRadius - dStart;
         float cy = effectiveCapRadius - dSide;
         float cornerDist = sqrt(cx*cx + cy*cy);
-        tailRounding = 1.0 - smoothstep(effectiveCapRadius - 0.005, effectiveCapRadius + 0.005, cornerDist);
+        tailRounding = 1.0 - smoothstep(effectiveCapRadius - capSoftness, effectiveCapRadius + capSoftness, cornerDist);
     }
-    
+
     float roundingAlpha = headRounding * tailRounding;
 
     // --- FILL ---
@@ -104,10 +110,19 @@ void main() {
     if (u_progress > 0.99) fill = 1.0;
     if (u_progress < 0.02 && angle > 6.0) fill = 0.0;
 
-    // --- COLOR ---
-    float ringAlpha = smoothstep(u_innerRadius - 0.01, u_innerRadius, radius) -
-                      smoothstep(u_outerRadius, u_outerRadius + 0.01, radius);
+    // --- COLOR & RING MASK ---
 
+    // FIX: More robust anti-aliasing (AA) calculation
+    // Clamp minimum to 0.002 to prevent edges from being too sharp on 4K/Retina screens
+    float aa = max(2.0 / u_resolution.y, 0.002);
+
+    // FIX: Use multiplication instead of subtraction for the ring mask.
+    // This is more stable on mobile GPUs.
+    float innerEdge = smoothstep(u_innerRadius - aa, u_innerRadius, radius);
+    float outerEdge = 1.0 - smoothstep(u_outerRadius, u_outerRadius + aa, radius);
+    float ringAlpha = innerEdge * outerEdge;
+
+    // Gradient
     float t = angle / TWO_PI;
     vec3 waterColor = texture(u_gradientTexture, vec2(t, 0.5)).rgb;
 
@@ -121,45 +136,29 @@ void main() {
     float foamSuppress = 1.0 - smoothstep(0.95, 1.0, u_progress);
     foam *= foamSuppress;
 
-    float sparkle = random(v_uv * vec2(100.0, 100.0) + u_flowTime);
+    float sparkle = random(v_uv * 10.0 + u_flowTime);
     foam *= (0.8 + 0.5 * sparkle);
 
     vec3 finalColor = mix(waterColor, vec3(1.0), foam);
 
-    // --- VOLUME / 3D LENS EFFECT ---
-    // Calculate a "bulge" factor based on distance from center of the track
-    float trackCenterDist = abs(radius - centerRadius) / (safeTrackWidth * 0.5); // 0 at center, 1 at edges
-    
-    // Simple lighting approximation
-    // Light comes from top-left (let's say). 
-    // We can compute a normal-like vector.
-    // Ideally, we want the center of the track to be brighter (specular highlight) 
-    // and edges to be slightly darker or refractive.
-    
-    // 1. Fake refraction/distortion at edges: already somewhat covered by flowProfile usage?
-    // Let's just add a specular highlight for "volume".
-    
-    float cylinderNormalZ = sqrt(1.0 - trackCenterDist * trackCenterDist); // 1.0 at center, 0.0 at edges (semi-circle profile)
-    
-    // Specular highlight running along the center of the tube
-    // Light direction assumption: perpendicular to screen? Or fixed directional?
-    // Let's do a simple "glossy tube" look.
+    // --- VOLUME ---
+    float trackCenterDist = abs(radius - centerRadius) / (safeTrackWidth * 0.5);
+    float cylinderNormalZ = sqrt(max(0.0, 1.0 - trackCenterDist * trackCenterDist));
     float specular = pow(cylinderNormalZ, 3.0) * 0.4;
-    
-    // Shadowing at edges
     float edgeShadow = smoothstep(0.8, 1.0, trackCenterDist);
-    
-    // Apply volume effect based on u_volume intensity
-    // If u_volume is 0, we just use finalColor.
-    // If u_volume is 1, we apply full lighting.
-    
-    vec3 lightedColor = finalColor + vec3(specular); // Add highlight
-    lightedColor *= (1.0 - edgeShadow * 0.5); // Darken edges
-    
+    vec3 lightedColor = finalColor + vec3(specular);
+    lightedColor *= (1.0 - edgeShadow * 0.5);
     finalColor = mix(finalColor, lightedColor, u_volume);
 
-    // --- TRANSPARENT BACKGROUND ---
+    // --- FINAL ALPHA ---
     float finalAlpha = ringAlpha * fill * roundingAlpha;
+
+    // CRITICAL FIX FOR MOBILE:
+    // If alpha is very small, discard the pixel completely.
+    // This solves the "black squares" and incorrect blending issue on iOS/Android.
+    if (finalAlpha < 0.01) {
+        discard;
+    }
 
     fragColor = vec4(finalColor, finalAlpha);
 }
