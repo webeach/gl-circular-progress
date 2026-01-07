@@ -8,12 +8,15 @@
     <style>
         body {
             margin: 0;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             background-color: #111;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             color: white;
         }
@@ -23,13 +26,16 @@
             flex-direction: column;
             align-items: center;
             gap: 20px;
-            width: 450px;
+            width: 100%;
+            max-width: 450px;
         }
 
         .canvas-wrapper {
             position: relative;
-            width: 400px;
-            height: 400px;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 1;
+            height: auto;
         }
 
         canvas {
@@ -40,6 +46,7 @@
 
         .controls {
             width: 100%;
+            box-sizing: border-box;
             padding: 20px;
             background: rgba(255, 255, 255, 0.05);
             border-radius: 16px;
@@ -208,9 +215,10 @@
                     <button class="color-btn" data-colors='["#cc00ff"]'>Magic Fire</button>
                 </div>
                 <div class="color-api">
-                  <button class="color-btn" data-colors='["#00ff00"]'>Toxic</button>
-                  <button class="color-btn" data-colors='["#5500ff", "#00ffff"]'>Cosmic</button>
-                  <button class="color-btn" data-colors='["#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"]'>Rainbow</button>
+                    <button class="color-btn" data-colors='["#00ff00"]'>Toxic</button>
+                    <button class="color-btn" data-colors='["#5500ff", "#00ffff"]'>Cosmic</button>
+                    <button class="color-btn"
+                        data-colors='["#ff0000", "#ffff00", "#00ff00", "#00ffff", "#0000ff", "#ff00ff"]'>Rainbow</button>
                 </div>
             </div>
         </div>
@@ -321,4 +329,3 @@
 </body>
 
 </html>
-
