@@ -27,6 +27,7 @@ node_modules
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+.pnpm-store
 
 # Build directories and files
 /lib
